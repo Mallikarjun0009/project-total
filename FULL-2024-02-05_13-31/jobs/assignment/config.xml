@@ -1,0 +1,70 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2175.v76a_fff0a_2618"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2175.v76a_fff0a_2618">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@3853.vb_a_490d892963">
+    <script>pipeline {
+    agent any
+    stages{
+        stage(&apos;git clone&apos;) {
+            steps {
+                checkout scmGit(branches: [[name: &apos;*/master&apos;]], extensions: [], userRemoteConfigs: [[url: &apos;https://github.com/Mallikarjun0009/dockerjenkin.git&apos;]])
+            }
+        }
+        stage(&apos;validate&apos;) {
+            steps {
+                sh &apos;mvn validate&apos;
+            }
+        }
+        stage(&apos;compaile&apos;) {
+            steps {
+                sh &apos;mvn compile&apos;
+            }
+        }
+        stage(&apos;testing&apos;) {
+            steps{
+                sh &apos;mvn test&apos;
+            }
+        }
+        stage(&apos;sonarQube code quality testing&apos;) {
+            steps{
+                sh &apos;&apos;&apos;
+                mvn clean verify sonar:sonar \
+                -Dsonar.projectKey=assignment \
+                -Dsonar.projectName=&apos;assignment&apos; \
+                -Dsonar.host.url=http://18.206.229.150:9001 \
+                -Dsonar.token=sqp_d0fd80ca90ec9b1ddd61db14fb0e4ed6ea54fa51&apos;&apos;&apos;
+            }
+        }
+        stage(&apos;package&apos;) {
+            steps{
+                sh &apos;mvn package&apos;
+            }
+        }
+        stage(&apos;nexus artifact uploader&apos;) {
+            steps{
+                nexusArtifactUploader artifacts: [[artifactId: &apos;java-tomcat-maven-example&apos;, classifier: &apos;&apos;, file: &apos;/var/lib/jenkins/workspace/assignment/target/java-tomcat-maven-example.war&apos;, type: &apos;war&apos;]], credentialsId: &apos;arjun-nexus&apos;, groupId: &apos;com.example&apos;, nexusUrl: &apos;34.204.3.137:8081&apos;, nexusVersion: &apos;nexus3&apos;, protocol: &apos;http&apos;, repository: &apos;assignment&apos;, version: &apos;1.0-SNAPSHOT&apos;
+            }
+        }
+        stage(&apos;deplye to tomcat&apos;){
+            steps{
+                deploy adapters: [tomcat9(credentialsId: &apos;tomcat&apos;, path: &apos;&apos;, url: &apos;http://54.158.181.221:8080/&apos;)], contextPath: &apos;assignment &apos;, war: &apos;**/*.war&apos;
+            }
+        }
+    }
+}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

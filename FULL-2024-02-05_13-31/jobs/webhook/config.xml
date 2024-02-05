@@ -1,0 +1,91 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1385.vb_58b_86ea_fff1">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2175.v76a_fff0a_2618"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2175.v76a_fff0a_2618">
+      <jobProperties/>
+      <triggers/>
+      <parameters>
+        <string>environment</string>
+      </parameters>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+      <abortPrevious>false</abortPrevious>
+    </org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>environment</name>
+          <description>Select the environment to deploy to</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>dev</string>
+              <string>test</string>
+              <string>prod</string>
+              <string>pre-prod</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@3853.vb_a_490d892963">
+    <script>pipeline {
+    agent any
+    parameters {
+        choice choices: [&apos;dev&apos;, &apos;test&apos;, &apos;prod&apos;, &apos;pre-prod&apos;], description: &apos;Select the environment to deploy to&apos;, name: &apos;environment&apos;
+    }
+    stages {
+        stage(&apos;git clone&apos;) {
+            steps {
+                checkout scmGit(branches: [[name: &apos;*/master&apos;]], extensions: [], userRemoteConfigs: [[credentialsId: &apos;tomcat&apos;, url: &apos;https://github.com/Mallikarjun0009/taxi-booking.git&apos;]])
+            }
+        }
+        stage(&apos;validate&apos;){
+            steps{
+                sh &apos;mvn validate&apos;
+            }
+        }
+        stage(&apos;compile&apos;){
+            steps {
+                sh &apos;mvn compile&apos;
+            }
+        }
+        stage(&apos;test&apos;) {
+            steps{
+                sh &apos;mvn test&apos;
+            }
+        }
+        stage(&apos;package&apos;) {
+            steps {
+                sh &apos;mvn package&apos;
+            }
+        }
+        stage(&apos;deploy to tomcat server01&apos;) {
+            when {
+                expression{
+                    params.environment == &apos;dev&apos;
+                }
+            }
+            input {
+                message &apos;Should we continue?&apos;
+                ok &apos;OK&apos;
+                submitter &apos;ALLOW&apos;
+                submitterParameter &apos;Yes&apos;
+            }
+            steps {
+                deploy adapters: [tomcat9(credentialsId: &apos;tomcat&apos;, path: &apos;&apos;, url: &apos;http://3.83.255.156:8080/&apos;)], contextPath: &apos;dev&apos;, war: &apos;**/*.war&apos;
+            }
+        }
+    }
+}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
